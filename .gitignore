@@ -1,0 +1,35 @@
+# dunder folders
+__pycache__
+
+
+# datasets
+*.npy
+datasets/exchange_rate
+datasets/electricity
+# checkpoints
+*.pt
+multivariate_demos/lightning_logs
+multivariate_demos/wandb
+multivariate_demos/checkpoints
+multivariate_demos/test_results
+*.ipynb_checkpoints*
+
+multivariate_lstf_demos/data
+multivariate_lstf_demos/autoformer_data
+multivariate_lstf_demos/lightning_logs
+# samples
+samples*
+gifs*
+
+# scripts
+*.slrm
+
+# misc
+archive*
+wandb*
+*.DS_Store
+
+# From BNS
+env
+*.swp
+*.swo

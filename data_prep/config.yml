@@ -1,0 +1,15 @@
+raw_data: /h/dsmith/physionet_data/physionet.org/files/challenge-2019/1.0.0/training  
+prepped_data: /h/dsmith/physionet_data/prepped
+write_every: 5000
+npackets: 2
+
+omitted_columns: []
+always_sepsis: yes
+
+imputations:
+  all_nulls: global_mean
+  some_nulls: linear_interpolate
+
+data_length:
+  min_length: 10
+  short_treatment: remove 
