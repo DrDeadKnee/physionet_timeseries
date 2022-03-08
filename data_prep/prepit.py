@@ -40,22 +40,20 @@ class Prepper(object):
             print("Working on {}".format(i))
             for j in tqdm(range(len(allfiles)), desc="Processing files: "):
                 raw = pd.read_csv(os.path.join(dirname, allfiles[j]), delimiter="|")
-                prepped = self.prep_one(raw, j)
-                prepped["id"] = user_count
-                big_data = big_data.append(prepped, ignore_index=True)
-                user_count += 1
+
+                try:
+                    prepped = self.prep_one(raw, j)
+                    prepped["id"] = user_count
+                    big_data = big_data.append(prepped, ignore_index=True)
+                    user_count += 1
+                except (KeyError, ValueError):
+                    pass
 
                 if (j % self.config['write_every'] == 0) or (user_count == len(allfiles)):
                     self.cached = big_data.copy()
                     chunk_count += 1
                     table = pa.Table.from_pandas(big_data)
                     pq.write_to_dataset(table, outpath)
-
-                    # big_data.to_parquet(os.path.join(
-                    #     outpath,
-                    #     "checkpoint_{}.parquet".format(chunk_count)
-                    # ))
-                    # big_data = pd.DataFrame()
 
                 if chunk_count >= self.config["npackets"]:
                     break
@@ -82,7 +80,8 @@ class Prepper(object):
 
         if len(column) > sum(column.isna()):
             if imputations["some_nulls"] == "linear_interpolate":
-                print("No, you!")
+                column = column.interpolate(method="linear", limit_direction="forward")
+                column = column.bfill()
             elif imputations["some_nulls"] == "ffill":
                 column = column.ffill()
                 column = column.bfill()
