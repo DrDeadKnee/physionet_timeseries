@@ -2,6 +2,8 @@
 
 import os
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import yaml
 from time import time
 from tqdm import tqdm
@@ -44,14 +46,21 @@ class Prepper(object):
                 user_count += 1
 
                 if (j % self.config['write_every'] == 0) or (user_count == len(allfiles)):
+                    self.cached = big_data.copy()
                     chunk_count += 1
-                    big_data.to_parquet(os.path.join(outpath, "checkpooint_{}.parquet".format(j)))
-                    big_data = pd.DataFrame()
+                    table = pa.Table.from_pandas(big_data)
+                    pq.write_to_dataset(table, outpath)
+
+                    # big_data.to_parquet(os.path.join(
+                    #     outpath,
+                    #     "checkpoint_{}.parquet".format(chunk_count)
+                    # ))
+                    # big_data = pd.DataFrame()
 
                 if chunk_count >= self.config["npackets"]:
                     break
 
-            print("Completed {}".format(i))
+            print("Completed {} in {} minutes".format(i, self.get_runtime()))
 
     def get_runtime(self):
         return (time() - self.started) / 60
@@ -79,7 +88,7 @@ class Prepper(object):
                 column = column.bfill()
 
         elif len(column) == sum(column.isna()):
-            column = column.fillna("0")
+            column = column.fillna(0)
 
         return column
 
