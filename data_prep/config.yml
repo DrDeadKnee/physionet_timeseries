@@ -1,7 +1,7 @@
 raw_data: /h/dsmith/physionet_data/physionet.org/files/challenge-2019/1.0.0/training  
 prepped_data: /h/dsmith/physionet_data/prepped
 write_every: 1000
-npackets: 2
+npackets: 50
 
 always_sepsis: yes
 omitted_columns: []
