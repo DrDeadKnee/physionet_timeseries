@@ -1,14 +1,28 @@
 raw_data: /h/dsmith/physionet_data/physionet.org/files/challenge-2019/1.0.0/training  
 prepped_data: /h/dsmith/physionet_data/prepped
-write_every: 5000
+write_every: 1000
 npackets: 2
 
-omitted_columns: []
 always_sepsis: yes
+omitted_columns: []
+kept_columns: 
+    - HR
+    - O2Sat
+    - Temp
+    - SBP
+    - MAP
+    - Resp
+    - Age
+    - Gender 
+    - Unit1
+    - Unit2
+    - HospAdmTime
+    - ICULOS
+    - SepsisLabel
 
 imputations:
   all_nulls: global_mean
-  some_nulls: linear_interpolate
+  some_nulls: ffill # linear_interpolate
 
 data_length:
   min_length: 10

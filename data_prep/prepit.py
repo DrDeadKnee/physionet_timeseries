@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import yaml
 from time import time
+from tqdm import tqdm
 
 
 class Prepper(object):
@@ -12,42 +13,75 @@ class Prepper(object):
         if config_path is None:
             config_path = "config.yml"
 
+        pd.options.mode.chained_assignment = None
+
         self.config_path = config_path
         self.config = yaml.safe_load(open(config_path, "r"))
         self.started = time()
 
     def main(self):
+        print("\nRunning data prep!")
+
         alldirs = [i for i in os.listdir(self.config["raw_data"]) if "training_set" in i]
         outpath = os.path.join(self.config["prepped_data"], "physionet_data.parquet")
         if not os.path.isdir(outpath):
             os.makedirs(outpath)
         big_data = pd.DataFrame()
 
-        count = 0
+        chunk_count = 0
+        user_count = 1
 
         for i in alldirs:
             dirname = os.path.join(self.config["raw_data"], i)
             allfiles = os.listdir(dirname)
 
-            for j in range(len(allfiles)):
-                raw = pd.read_csv(os.path.join(dirname, allfiles[j]))
+            print("Working on {}".format(i))
+            for j in tqdm(range(len(allfiles)), desc="Processing files: "):
+                raw = pd.read_csv(os.path.join(dirname, allfiles[j]), delimiter="|")
                 prepped = self.prep_one(raw, j)
+                prepped["id"] = user_count
                 big_data = big_data.append(prepped, ignore_index=True)
+                user_count += 1
 
-                if j % self.config['write_every'] == 0:
-                    count += 1
+                if (j % self.config['write_every'] == 0) or (user_count == len(allfiles)):
+                    chunk_count += 1
                     big_data.to_parquet(os.path.join(outpath, "checkpooint_{}.parquet".format(j)))
                     big_data = pd.DataFrame()
 
-                if count >= self.config["npackets"]:
+                if chunk_count >= self.config["npackets"]:
                     break
+
+            print("Completed {}".format(i))
 
     def get_runtime(self):
         return (time() - self.started) / 60
 
     def prep_one(self, rawdata, j):
-        print(j, self.get_runtime())
+        if len(self.config["kept_columns"]) > 0:
+            rawdata = rawdata[self.config["kept_columns"]]
+
+        for i in self.config["omitted_columns"]:
+            del rawdata[i]
+
+        for i in rawdata.columns:
+            rawdata[i] = self.impute_values(rawdata[i])
+
         return rawdata
+
+    def impute_values(self, column):
+        imputations = self.config["imputations"]
+
+        if len(column) > sum(column.isna()):
+            if imputations["some_nulls"] == "linear_interpolate":
+                print("No, you!")
+            elif imputations["some_nulls"] == "ffill":
+                column = column.ffill()
+                column = column.bfill()
+
+        elif len(column) == sum(column.isna()):
+            column = column.fillna("0")
+
+        return column
 
 
 if __name__ == "__main__":
