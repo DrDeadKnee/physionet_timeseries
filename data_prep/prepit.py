@@ -11,9 +11,39 @@ from time import time
 from tqdm import tqdm
 
 
+def yesno(query):
+    response = input(query + "(y/n)\n>")
+    if response == "y":
+        return True
+    elif response == "n":
+        return False
+    else:
+        print("Response must be 'y' or 'n'")
+        return yesno(query)
+
+
+class BadArgumentError(Exception):
+    pass
+
+
 class Prepper(object):
+    """
+    Interactive code that takes your config and the sparse physionet
+    training data, and prepares a parquet with no nulls in it,
+    according to desired parameters.
+    """
 
     def __init__(self, config_path=None):
+        """
+        Sets a few 'global' variables using
+        things hopefully already in repo.
+
+        Args:
+            config_path: path to config file which contains desired details
+                         on how the data is prepared. If none is provided, it
+                         assumes there is an appropriately formatted 'config.yml'
+                         in the working directory.
+        """
         if config_path is None:
             config_path = "config.yml"
 
@@ -25,6 +55,18 @@ class Prepper(object):
         self.means = pd.read_csv("summary_data/mean_values.csv")
 
     def main(self):
+        """
+        This is the main entry point for the function. It loops over the
+        training data directories, and all files within those directories.
+
+        If data is found at the specified location, it is cleared unless
+        the user decides to cancel the program.
+
+        For each file, it cleans the data and appends to a table.
+        once a certain number of customers have been processed, the table
+        is written as a chunk of a parquet (defined by the config chunk size),
+        memory is cleared, and the process is begun again.
+        """
         print("\nRunning data prep!")
 
         alldirs = [i for i in os.listdir(self.config["raw_data"]) if "training_set" in i]
@@ -50,7 +92,7 @@ class Prepper(object):
                 raw = pd.read_csv(os.path.join(dirname, allfiles[j]), delimiter="|")
 
                 try:
-                    prepped = self.prep_one(raw, j)
+                    prepped = self.prep_one(raw)
                     prepped["id"] = user_count
                     if len(prepped.index) > self.config["data_length"]["min_length"]:
                         big_data = big_data.append(prepped, ignore_index=True)
@@ -70,6 +112,12 @@ class Prepper(object):
             print("Completed {} in {} minutes".format(i, self.get_runtime()))
 
     def clear_previous(self, outpath):
+        """
+        Removes the data found at specified output location.
+
+        Args:
+            outpath: path to the current output destination.
+        """
         print("Need to remove existing data at {}".format(outpath))
         if yesno("Is it ok to proceed?"):
             shutil.rmtree(outpath)
@@ -78,9 +126,20 @@ class Prepper(object):
             sys.exit()
 
     def get_runtime(self):
+        """
+        Returns the time taken since instantiation, in minutes.
+        """
         return (time() - self.started) / 60
 
-    def prep_one(self, rawdata, j):
+    def prep_one(self, rawdata):
+        """
+        Iteratively treats columns in the raw data as specified by
+        the config.
+
+        Args:
+            rawdata: DataFrame corresponding to a simple loading of
+                     the physionet data.
+        """
         if self.config["remove_nonkept"]:
             rawdata = rawdata[self.config["kept_columns"]]
 
@@ -115,21 +174,6 @@ class Prepper(object):
                 column = column.fillna(0)
 
         return column
-
-
-def yesno(query):
-    response = input(query + "(y/n)\n>")
-    if response == "y":
-        return True
-    elif response == "n":
-        return False
-    else:
-        print("Response must be 'y' or 'n'")
-        return yesno(query)
-
-
-class BadArgumentError(Exception):
-    pass
 
 
 if __name__ == "__main__":
