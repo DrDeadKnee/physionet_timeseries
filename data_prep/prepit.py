@@ -55,7 +55,6 @@ class Prepper(object):
                     if len(prepped.index) > self.config["data_length"]["min_length"]:
                         big_data = big_data.append(prepped, ignore_index=True)
                     user_count += 1
-                    print(big_data)
                 except (KeyError, ValueError):
                     pass
 
