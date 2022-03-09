@@ -1,5 +1,5 @@
 raw_data: /ssd003/projects/forecasting_bootcamp/bootcamp_datasets/physionet.org/files/challenge-2019/1.0.0/training
-prepped_data: /h/dsmith/physionet_data/prepped
+prepped_data: /h/dsmith/physionet_data/preppedf
 write_every: 1000
 npackets: 50
 

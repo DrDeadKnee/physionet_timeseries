@@ -105,6 +105,7 @@ class Prepper(object):
                     chunk_count += 1
                     table = pa.Table.from_pandas(big_data)
                     pq.write_to_dataset(table, outpath)
+                    big_data = pd.DataFrame()
 
                 if chunk_count >= self.config["npackets"]:
                     break
@@ -148,6 +149,7 @@ class Prepper(object):
 
         for i in rawdata.columns:
             rawdata[i] = self.impute_values(rawdata[i], i)
+            rawdata[i] = rawdata[i].astype(float)
 
         rawdata["SepsisEver"] = min(1, max(0, -0.9 + sum(rawdata["SepsisLabel"])))
 
