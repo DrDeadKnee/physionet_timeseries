@@ -20,6 +20,7 @@ class Prepper(object):
         self.config_path = config_path
         self.config = yaml.safe_load(open(config_path, "r"))
         self.started = time()
+        self.means = pd.read_csv("summary_data/mean_values.csv")
 
     def main(self):
         print("\nRunning data prep!")
@@ -44,7 +45,8 @@ class Prepper(object):
                 try:
                     prepped = self.prep_one(raw, j)
                     prepped["id"] = user_count
-                    big_data = big_data.append(prepped, ignore_index=True)
+                    if len(prepped.index) > self.config["data_length"]["min_length"]:
+                        big_data = big_data.append(prepped, ignore_index=True)
                     user_count += 1
                 except (KeyError, ValueError):
                     pass
@@ -64,30 +66,36 @@ class Prepper(object):
         return (time() - self.started) / 60
 
     def prep_one(self, rawdata, j):
-        if len(self.config["kept_columns"]) > 0:
+        if (len(self.config["kept_columns"]) > 0) and self.config["remove_nonkept"]:
             rawdata = rawdata[self.config["kept_columns"]]
 
         for i in self.config["omitted_columns"]:
             del rawdata[i]
 
         for i in rawdata.columns:
-            rawdata[i] = self.impute_values(rawdata[i])
+            rawdata[i] = self.impute_values(rawdata[i], i)
+
+        rawdata["SepsisEver"] = max(0, -0.9 + sum(rawdata["SepsisLabel"]))
 
         return rawdata
 
-    def impute_values(self, column):
+    def impute_values(self, column, columnname):
         imputations = self.config["imputations"]
 
         if len(column) > sum(column.isna()):
             if imputations["some_nulls"] == "linear_interpolate":
                 column = column.interpolate(method="linear", limit_direction="forward")
+                column = column.ffill()
                 column = column.bfill()
             elif imputations["some_nulls"] == "ffill":
                 column = column.ffill()
                 column = column.bfill()
 
         elif len(column) == sum(column.isna()):
-            column = column.fillna(0)
+            if imputations["all_nulls"] == "global_mean":
+                column = column.fillna(self.means["columnname"])
+            else:
+                column = column.fillna(0)
 
         return column
 
