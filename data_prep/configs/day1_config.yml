@@ -1,10 +1,10 @@
 raw_data: /ssd003/projects/forecasting_bootcamp/bootcamp_datasets/physionet.org/files/challenge-2019/1.0.0/training
-prepped_data: /h/dsmith/physionet_data/preppedf
+prepped_data: /h/dsmith/physionet_data/prepped
 write_every: 1000
 npackets: 50
 
 omitted_columns: []
-remove_nonkept: no
+remove_nonkept: True
 kept_columns: 
     - HR
     - O2Sat
@@ -22,7 +22,7 @@ kept_columns:
 
 imputations:
   all_nulls: global_mean
-  some_nulls: linear_interpolate # linear_interpolate, ffill
+  some_nulls: ffill # linear_interpolate
 
 data_length:
   min_length: 10
