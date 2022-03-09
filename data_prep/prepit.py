@@ -4,6 +4,8 @@ import os
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import shutil
+import sys
 import yaml
 from time import time
 from tqdm import tqdm
@@ -27,8 +29,13 @@ class Prepper(object):
 
         alldirs = [i for i in os.listdir(self.config["raw_data"]) if "training_set" in i]
         outpath = os.path.join(self.config["prepped_data"], "physionet_data.parquet")
+
+        if os.path.exists(outpath):
+            self.clear_previous(outpath)
+
         if not os.path.isdir(outpath):
             os.makedirs(outpath)
+
         big_data = pd.DataFrame()
 
         chunk_count = 0
@@ -48,6 +55,7 @@ class Prepper(object):
                     if len(prepped.index) > self.config["data_length"]["min_length"]:
                         big_data = big_data.append(prepped, ignore_index=True)
                     user_count += 1
+                    print(big_data)
                 except (KeyError, ValueError):
                     pass
 
@@ -62,11 +70,19 @@ class Prepper(object):
 
             print("Completed {} in {} minutes".format(i, self.get_runtime()))
 
+    def clear_previous(self, outpath):
+        print("Need to remove existing data at {}".format(outpath))
+        if yesno("Is it ok to proceed?"):
+            shutil.rmtree(outpath)
+        else:
+            print("Exiting...")
+            sys.exit()
+
     def get_runtime(self):
         return (time() - self.started) / 60
 
     def prep_one(self, rawdata, j):
-        if (len(self.config["kept_columns"]) > 0) and self.config["remove_nonkept"]:
+        if self.config["remove_nonkept"]:
             rawdata = rawdata[self.config["kept_columns"]]
 
         for i in self.config["omitted_columns"]:
@@ -75,7 +91,7 @@ class Prepper(object):
         for i in rawdata.columns:
             rawdata[i] = self.impute_values(rawdata[i], i)
 
-        rawdata["SepsisEver"] = max(0, -0.9 + sum(rawdata["SepsisLabel"]))
+        rawdata["SepsisEver"] = min(1, max(0, -0.9 + sum(rawdata["SepsisLabel"])))
 
         return rawdata
 
@@ -90,14 +106,31 @@ class Prepper(object):
             elif imputations["some_nulls"] == "ffill":
                 column = column.ffill()
                 column = column.bfill()
+            else:
+                raise BadArgumentError("imputations: some_nulls must be in 'ffill' or 'linear_interpolate'")
 
         elif len(column) == sum(column.isna()):
-            if imputations["all_nulls"] == "global_mean":
-                column = column.fillna(self.means["columnname"])
+            if (imputations["all_nulls"] == "global_mean") and (columnname in self.means.columns):
+                column = column.fillna(self.means[columnname].iloc[0])
             else:
                 column = column.fillna(0)
 
         return column
+
+
+def yesno(query):
+    response = input(query + "(y/n)\n>")
+    if response == "y":
+        return True
+    elif response == "n":
+        return False
+    else:
+        print("Response must be 'y' or 'n'")
+        return yesno(query)
+
+
+class BadArgumentError(Exception):
+    pass
 
 
 if __name__ == "__main__":
