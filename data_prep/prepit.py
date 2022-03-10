@@ -158,6 +158,7 @@ class Prepper(object):
     def impute_values(self, column, columnname):
         imputations = self.config["imputations"]
 
+        # Todo replace with global
         if len(column) > sum(column.isna()):
             if imputations["some_nulls"] == "linear_interpolate":
                 column = column.interpolate(method="linear", limit_direction="forward")
