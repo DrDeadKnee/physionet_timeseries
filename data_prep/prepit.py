@@ -151,7 +151,7 @@ class Prepper(object):
             rawdata[i] = self.impute_values(rawdata[i], i)
             rawdata[i] = rawdata[i].astype(float)
 
-        rawdata["SepsisEver"] = min(1, max(0, -0.9 + sum(rawdata["SepsisLabel"])))
+        rawdata["SepsisEver"] = min(1, max(0, sum(rawdata["SepsisLabel"])))
 
         return rawdata
 
