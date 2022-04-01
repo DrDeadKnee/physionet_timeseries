@@ -166,6 +166,12 @@ class Prepper(object):
             elif imputations["some_nulls"] == "ffill":
                 column = column.ffill()
                 column = column.bfill()
+            elif imputations["some_nulls"] == "most_recent":
+                column = column.ffill()
+                if columnname in self.means.columns:
+                    column = column.fillna(self.means[columnname].iloc[0])
+                else:
+                    column = column.fillna(0)
             else:
                 raise BadArgumentError("imputations: some_nulls must be in 'ffill' or 'linear_interpolate'")
 
