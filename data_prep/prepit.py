@@ -151,13 +151,14 @@ class Prepper(object):
             rawdata[i] = self.impute_values(rawdata[i], i)
             rawdata[i] = rawdata[i].astype(float)
 
-        rawdata["SepsisEver"] = min(1, max(0, -0.9 + sum(rawdata["SepsisLabel"])))
+        rawdata["SepsisEver"] = min(1, max(0, sum(rawdata["SepsisLabel"])))
 
         return rawdata
 
     def impute_values(self, column, columnname):
         imputations = self.config["imputations"]
 
+        # Todo replace with global
         if len(column) > sum(column.isna()):
             if imputations["some_nulls"] == "linear_interpolate":
                 column = column.interpolate(method="linear", limit_direction="forward")
